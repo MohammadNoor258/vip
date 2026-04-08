@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="menu.menuTitle">Menu</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="bar menu-customer-header">
+      <div class="menu-brand">
+        <img id="restaurantLogo" class="restaurant-logo hidden" alt="" />
+        <div>
+          <h1 id="restaurantName" data-i18n="menu.tableService">Table service</h1>
+          <span class="badge" id="tableBadge">Table —</span>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button type="button" id="themeToggleBtn" class="secondary">Dark</button>
+        <button type="button" id="langSwitchBtn" class="secondary lang-switch">العربية</button>
+      </div>
+    </header>
+    <div class="page">
+      <div id="subExpired" class="alert hidden" role="alert"></div>
+      <div id="tableWarning" class="alert info hidden">
+        Open this page from your table QR code.
+      </div>
+      <div id="trackingBar" class="card hidden" style="margin-bottom:1rem">
+        <p class="meta">Order tracking</p>
+        <div id="trackingSteps" class="row-actions">
+          <span class="status-pill status-preparing">Preparing</span>
+          <span class="status-pill status-ready">Ready</span>
+          <span class="status-pill status-completed">On the way</span>
+        </div>
+        <p id="etaText" class="meta"></p>
+      </div>
+      <div id="joinPanel" class="card" style="margin-bottom: 1rem">
+        <h2 style="margin:0 0 .6rem; font-size:1rem" data-i18n="menu.joinSession">Join this table session</h2>
+        <div class="form-stack">
+          <input id="guestName" type="text" placeholder="Your name (required)" data-i18n-placeholder="menu.yourName" />
+          <input id="guestPhone" type="text" placeholder="Phone (optional, for ready notifications)" data-i18n-placeholder="menu.yourPhone" />
+          <button id="joinBtn" type="button" data-i18n="menu.joinTable">Join table</button>
+          <p id="joinMsg" class="meta" style="margin:0"></p>
+        </div>
+      </div>
+      <div id="billBox" class="card hidden" style="margin-bottom: 1rem">
+        <h2 style="margin:0 0 .5rem; font-size:1rem" data-i18n="menu.sessionBill">Session bill</h2>
+        <p id="myBill" class="meta" style="margin:.2rem 0"></p>
+        <p id="tableBill" class="meta" style="margin:.2rem 0"></p>
+        <div id="myOrdersSection" style="margin-top:.75rem"></div>
+      </div>
+      <div id="menuBlocked" class="hidden">
+        <p class="muted" data-i18n="menu.orderingUnavailable">Ordering is unavailable.</p>
+      </div>
+      <div id="menuArea" class="hidden">
+        <div class="category-filters" id="categoryFilters" aria-label="Filter by category"></div>
+        <h2 class="menu-section-title" data-i18n="menu.menuTitle">Menu</h2>
+        <div id="menuGrid" class="grid-menu menu-items-grid"></div>
+        <div class="cart">
+          <strong data-i18n="menu.yourOrder">Your order</strong>
+          <ul id="cartList"></ul>
+          <p id="cartTotal" style="margin: 0.5rem 0 0; font-weight: 600"></p>
+          <label for="customerNote" style="display: block; margin-top: 0.75rem; font-size: 0.9rem" data-i18n="menu.note">Note (optional)</label>
+          <textarea
+            id="customerNote"
+            class="note-input"
+            rows="2"
+            maxlength="500"
+            placeholder="Allergies, preferences…"
+            data-i18n-placeholder="menu.notePlaceholder"
+          ></textarea>
+          <div style="margin-top: 0.75rem">
+            <button id="submitOrder" type="button" data-i18n="menu.sendOrder">Send order</button>
+            <span id="orderMsg" style="margin-left: 0.75rem; color: var(--muted)"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="site-footer">
+      <p data-i18n="common.footerText">Developed by Thaka (شركة ذكاء)</p>
+      <p>
+        <a href="https://wa.me/9627XXXXXXXX" target="_blank" rel="noopener">WhatsApp</a> ·
+        <a href="mailto:info@thaka.com">Email</a> ·
+        <a href="https://facebook.com/thaka" target="_blank" rel="noopener">Facebook</a> ·
+        <a href="https://instagram.com/thaka" target="_blank" rel="noopener">Instagram</a>
+      </p>
+    </footer>
+    <button id="cartFab" type="button" class="btn" style="position:fixed;right:1rem;bottom:1rem;border-radius:999px">🛒 <span id="cartCount">0</span></button>
+    <script src="/i18n.js"></script>
+    <script src="/ui.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/menu.js"></script>
+  </body>
+</html>

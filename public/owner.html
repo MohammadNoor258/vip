@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="owner.title">Owner dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="loginPanel" class="login-panel">
+      <div class="row-actions">
+        <h2 style="margin-top: 0" data-i18n="owner.loginTitle">Owner sign in</h2>
+        <button type="button" id="langSwitchBtn" class="secondary lang-switch">العربية</button>
+      </div>
+      <div class="form-stack">
+        <input id="user" type="text" autocomplete="username" placeholder="Username" data-i18n-placeholder="superadmin.ownerUsername" />
+        <input id="pass" type="password" autocomplete="current-password" placeholder="Password" data-i18n-placeholder="superadmin.ownerPassword" />
+        <button type="button" id="loginBtn" data-i18n="common.signIn">Sign in</button>
+        <p id="loginErr" style="color: var(--danger); margin: 0; font-size: 0.9rem"></p>
+        <p class="meta" style="margin: 0"><span data-i18n="owner.cashierLink">Cashier? Open cashier page</span> <a href="/cashier.html">/cashier.html</a></p>
+      </div>
+    </div>
+
+    <div id="dash" class="hidden">
+      <header class="bar">
+        <h1 data-i18n="owner.title">Owner dashboard</h1>
+        <div class="row-actions">
+          <button id="themeToggleBtn" type="button" class="secondary">Dark</button>
+          <button id="exportCsvBtn" type="button" class="secondary">Export CSV</button>
+          <button id="logoutBtn" type="button" class="secondary" data-i18n="common.logout">Log out</button>
+        </div>
+      </header>
+      <div class="page">
+        <section class="card dashboard-card">
+          <h2 class="dashboard-panel-title" data-i18n="owner.summary">Summary</h2>
+          <div class="dashboard-stats">
+            <div><div class="meta" data-i18n="owner.todayRevenue">Today revenue</div><div id="todayRevenue" class="stat-value">—</div></div>
+            <div><div class="meta" data-i18n="owner.todayOrders">Today orders</div><div id="todayOrders" class="stat-value">—</div></div>
+            <div><div class="meta" data-i18n="owner.weekRevenue">Week revenue</div><div id="weekRevenue" class="stat-value">—</div></div>
+            <div><div class="meta" data-i18n="owner.weekOrders">Week orders</div><div id="weekOrders" class="stat-value">—</div></div>
+          </div>
+        </section>
+        <section class="card dashboard-card">
+          <h2 class="dashboard-panel-title" data-i18n="owner.topSelling">Top selling items</h2>
+          <ol id="topItems" class="report-list"></ol>
+        </section>
+        <section class="card dashboard-card">
+          <h2 class="dashboard-panel-title">Revenue / Orders trend</h2>
+          <canvas id="trendChart" height="120"></canvas>
+          <p id="compareView" class="meta"></p>
+        </section>
+      </div>
+    </div>
+    <footer class="site-footer">
+      <p data-i18n="common.footerText">Developed by Thaka (شركة ذكاء)</p>
+      <p>
+        <a href="https://wa.me/9627XXXXXXXX" target="_blank" rel="noopener">WhatsApp</a> ·
+        <a href="mailto:info@thaka.com">Email</a> ·
+        <a href="https://facebook.com/thaka" target="_blank" rel="noopener">Facebook</a> ·
+        <a href="https://instagram.com/thaka" target="_blank" rel="noopener">Instagram</a>
+      </p>
+    </footer>
+    <script src="/i18n.js"></script>
+    <script src="/ui.js"></script>
+    <script src="/owner.js"></script>
+  </body>
+  </html>
+

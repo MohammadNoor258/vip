@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="cashier.title">Cashier - table blocks</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <div id="loginPanel" class="login-panel">
+      <div class="row-actions">
+        <h2 style="margin-top: 0" data-i18n="cashier.loginTitle">Cashier sign in</h2>
+        <button type="button" id="langSwitchBtn" class="secondary lang-switch">العربية</button>
+      </div>
+      <div class="form-stack">
+        <input id="user" type="text" autocomplete="username" placeholder="Username" data-i18n-placeholder="superadmin.cashierUsername" />
+        <input id="pass" type="password" autocomplete="current-password" placeholder="Password" data-i18n-placeholder="superadmin.cashierPassword" />
+        <button type="button" id="loginBtn" data-i18n="common.signIn">Sign in</button>
+        <p id="loginErr" style="color: var(--danger); margin: 0; font-size: 0.9rem"></p>
+        <p class="meta" style="margin:0"><span data-i18n="cashier.ownerLink">Owner dashboard</span>: <a href="/owner.html">/owner.html</a></p>
+      </div>
+    </div>
+
+    <div id="app" class="hidden">
+      <header class="bar">
+        <h1 data-i18n="cashier.title">Cashier - table blocks</h1>
+        <div class="row-actions">
+          <button id="themeToggleBtn" class="secondary" type="button">Dark</button>
+          <span id="wsBadge" class="badge">Socket…</span>
+          <button id="logoutBtn" class="secondary" type="button" data-i18n="common.logout">Log out</button>
+        </div>
+      </header>
+      <div class="page">
+        <div class="row-actions" style="margin-bottom:.75rem">
+          <input id="tableSearch" class="input-inline" type="text" placeholder="Search table..." />
+          <select id="tableFilter" class="input-inline">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="idle">Idle</option>
+          </select>
+        </div>
+        <div id="blocks" class="orders-grouped"></div>
+        <section id="detail" class="card dashboard-card hidden" style="margin-top:1rem">
+          <h2 id="detailTitle" class="dashboard-panel-title" data-i18n="cashier.tableDetail">Table detail</h2>
+          <div class="row-actions">
+            <button id="endSessionBtn" type="button" class="danger hidden" data-i18n="cashier.endSession">End session</button>
+          </div>
+          <p id="detailTotals" class="meta"></p>
+          <h3 class="subsection-title" data-i18n="cashier.people">People</h3>
+          <ul id="peopleList" class="report-list"></ul>
+          <h3 class="subsection-title" data-i18n="cashier.orders">Orders</h3>
+          <div id="ordersList" class="orders-list"></div>
+        </section>
+      </div>
+    </div>
+    <footer class="site-footer">
+      <p data-i18n="common.footerText">Developed by Thaka (شركة ذكاء)</p>
+      <p>
+        <a href="https://wa.me/9627XXXXXXXX" target="_blank" rel="noopener">WhatsApp</a> ·
+        <a href="mailto:info@thaka.com">Email</a> ·
+        <a href="https://facebook.com/thaka" target="_blank" rel="noopener">Facebook</a> ·
+        <a href="https://instagram.com/thaka" target="_blank" rel="noopener">Instagram</a>
+      </p>
+    </footer>
+    <script src="/i18n.js"></script>
+    <script src="/ui.js"></script>
+    <script src="/cashier.js"></script>
+  </body>
+  </html>
+

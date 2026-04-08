@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="superadmin.title">Superadmin - all restaurants</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <div id="loginPanel" class="login-panel">
+      <div class="row-actions">
+        <h2 style="margin-top: 0" data-i18n="superadmin.loginTitle">Superadmin sign in</h2>
+      </div>
+      <p class="meta">Uses separate cookie <code>vip_super_token</code> (not staff).</p>
+      <div class="form-stack">
+        <input id="user" type="text" autocomplete="username" placeholder="Username" data-i18n-placeholder="superadmin.ownerUsername" />
+        <input id="pass" type="password" autocomplete="current-password" placeholder="Password" data-i18n-placeholder="superadmin.ownerPassword" />
+        <button type="button" id="loginBtn" data-i18n="common.signIn">Sign in</button>
+        <p id="loginErr" style="color: var(--danger); margin: 0; font-size: 0.9rem"></p>
+      </div>
+    </div>
+
+    <div id="dash" class="hidden min-h-screen bg-slate-100 text-slate-900">
+      <div class="flex">
+        <aside class="w-64 min-h-screen bg-slate-900 text-slate-100 p-4">
+          <h2 class="text-lg font-semibold mb-4">Superadmin</h2>
+          <nav class="space-y-2">
+            <button data-view="restaurants" class="super-nav-btn w-full text-left px-3 py-2 rounded bg-slate-800">Restaurants</button>
+            <button data-view="subscriptions" class="super-nav-btn w-full text-left px-3 py-2 rounded hover:bg-slate-800">Subscriptions</button>
+            <button data-view="settings" class="super-nav-btn w-full text-left px-3 py-2 rounded hover:bg-slate-800">Settings</button>
+          </nav>
+        </aside>
+        <main class="flex-1">
+          <header class="bar">
+            <h1 data-i18n="superadmin.title">Superadmin - all restaurants</h1>
+            <div class="row-actions">
+              <button type="button" id="themeToggleBtn" class="secondary">Dark</button>
+              <button type="button" class="secondary" id="logoutBtn" data-i18n="common.logout">Log out</button>
+            </div>
+          </header>
+          <div class="page super-view" id="view-restaurants">
+            <p class="meta" id="breadcrumb">Superadmin &gt; Restaurants</p>
+            <section class="card dashboard-card" style="margin-bottom:1rem">
+          <div class="row-actions">
+            <h2 class="dashboard-panel-title" data-i18n="superadmin.addRestaurant">Add restaurant</h2>
+            <button id="openAddRestaurantModal" type="button" class="success">+ Add restaurant</button>
+          </div>
+          <form id="addRestaurantForm" class="menu-admin-form hidden" style="max-width:700px" enctype="multipart/form-data">
+            <input name="name" type="text" placeholder="Restaurant name" data-i18n-placeholder="superadmin.restaurantName" required />
+            <input name="slug" type="text" placeholder="Slug" data-i18n-placeholder="superadmin.slug" required />
+            <input name="whatsappNumber" type="text" placeholder="Restaurant WhatsApp number" data-i18n-placeholder="superadmin.whatsappNumber" />
+            <input name="contactName" type="text" placeholder="Contact name" data-i18n-placeholder="superadmin.contactName" />
+            <input name="contactPhone" type="text" placeholder="Contact phone" data-i18n-placeholder="superadmin.contactPhone" />
+            <input name="contactEmail" type="text" placeholder="Contact email" data-i18n-placeholder="superadmin.contactEmail" />
+            <input name="logo" type="file" accept="image/*" />
+            <input name="ownerUsername" type="text" placeholder="Owner username" data-i18n-placeholder="superadmin.ownerUsername" required />
+            <input name="ownerPassword" type="text" placeholder="Owner password" data-i18n-placeholder="superadmin.ownerPassword" required />
+            <input name="cashierUsername" type="text" placeholder="Cashier username" data-i18n-placeholder="superadmin.cashierUsername" required />
+            <input name="cashierPassword" type="text" placeholder="Cashier password" data-i18n-placeholder="superadmin.cashierPassword" required />
+            <input name="tableCount" type="number" min="1" max="1000" value="10" />
+            <button type="submit" data-i18n="superadmin.createRestaurant">Create restaurant</button>
+          </form>
+            </section>
+            <section class="card dashboard-card" style="margin-bottom:1rem">
+          <h2 class="dashboard-panel-title" data-i18n="superadmin.search">Search</h2>
+          <div class="row-actions">
+            <input id="searchInput" type="text" class="input-inline" placeholder="Search by name, slug, contact, WhatsApp..." data-i18n-placeholder="superadmin.searchPlaceholder" style="min-width:260px" />
+            <button id="searchBtn" type="button" data-i18n="superadmin.search">Search</button>
+            <button id="clearSearchBtn" type="button" class="secondary" data-i18n="superadmin.clear">Clear</button>
+          </div>
+            </section>
+            <p id="listErr" class="alert hidden"></p>
+            <div class="card dashboard-card">
+              <div class="overflow-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="text-left border-b border-slate-700">
+                      <th class="py-2">Name</th>
+                      <th>Logo</th>
+                      <th>Slug</th>
+                      <th>WhatsApp</th>
+                      <th>Plan</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="restaurantList"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="page super-view hidden" id="view-subscriptions">
+            <p class="meta">Superadmin &gt; Subscriptions</p>
+            <div id="subscriptionCards" class="orders-grouped"></div>
+          </div>
+          <div class="page super-view hidden" id="view-settings">
+            <p class="meta">Superadmin &gt; Settings</p>
+            <section class="card dashboard-card">
+              <h2 class="dashboard-panel-title">System settings</h2>
+              <div class="menu-admin-form" style="max-width:640px">
+                <label>Currency</label>
+                <input id="settingCurrency" type="text" value="EUR" />
+                <label>Timezone</label>
+                <input id="settingTimezone" type="text" value="UTC" />
+                <label>Support email</label>
+                <input id="settingSupportEmail" type="email" value="info@thaka.com" />
+                <label>Support WhatsApp</label>
+                <input id="settingSupportWhatsapp" type="text" value="+9627XXXXXXXX" />
+                <button id="saveSettingsBtn" type="button">Save settings</button>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+    </div>
+    <div id="editModal" class="hidden fixed inset-0 z-50 bg-black/50 p-4">
+      <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-4">
+        <div class="row-actions">
+          <h3 class="text-lg font-semibold">Edit restaurant</h3>
+          <button type="button" id="closeEditModal" class="secondary">Close</button>
+        </div>
+        <div class="row-actions" style="margin: .8rem 0">
+          <button type="button" class="secondary edit-tab active" data-tab="general">General Info</button>
+          <button type="button" class="secondary edit-tab" data-tab="subscription">Subscription</button>
+          <button type="button" class="secondary edit-tab" data-tab="tables">Tables</button>
+          <button type="button" class="secondary edit-tab" data-tab="users">Users</button>
+        </div>
+        <div id="tab-general" class="edit-panel">
+          <form id="editGeneralForm" class="menu-admin-form" style="max-width:none">
+            <input type="hidden" name="id" />
+            <input name="name" type="text" placeholder="Restaurant name" required />
+            <input name="slug" type="text" placeholder="Slug" required />
+            <input name="whatsappNumber" type="text" placeholder="Restaurant WhatsApp number" />
+            <input name="contactName" type="text" placeholder="Contact name" />
+            <input name="contactPhone" type="text" placeholder="Contact phone" />
+            <input name="contactEmail" type="text" placeholder="Contact email" />
+            <input name="logo" type="file" accept="image/*" />
+            <button type="submit">Save general info</button>
+          </form>
+        </div>
+        <div id="tab-subscription" class="edit-panel hidden">
+          <form id="editSubscriptionForm" class="menu-admin-form" style="max-width:none">
+            <input type="hidden" name="subscriptionId" />
+            <select name="plan" class="input-inline"><option>Standard</option><option>Premium</option></select>
+            <select name="status" class="input-inline"><option value="active">active</option><option value="cancelled">cancelled</option><option value="suspended">suspended</option></select>
+            <input name="startsAt" type="datetime-local" />
+            <input name="expiresAt" type="datetime-local" />
+            <button type="submit">Save subscription</button>
+          </form>
+        </div>
+        <div id="tab-tables" class="edit-panel hidden">
+          <form id="editTablesForm" class="menu-admin-form" style="max-width:none">
+            <input type="hidden" name="id" />
+            <input name="tableCount" type="number" min="1" max="1000" required />
+            <button type="submit">Save table count</button>
+          </form>
+        </div>
+        <div id="tab-users" class="edit-panel hidden">
+          <form id="editUsersForm" class="menu-admin-form" style="max-width:none">
+            <input type="hidden" name="id" />
+            <input name="ownerUsername" type="text" placeholder="Owner username" />
+            <input name="ownerPassword" type="text" placeholder="Owner password reset" />
+            <input name="cashierUsername" type="text" placeholder="Cashier username" />
+            <input name="cashierPassword" type="text" placeholder="Cashier password reset" />
+            <button type="submit">Save users</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <footer class="site-footer">
+      <p data-i18n="common.footerText">Developed by Thaka (شركة ذكاء)</p>
+      <p>
+        <a href="https://wa.me/9627XXXXXXXX" target="_blank" rel="noopener">WhatsApp</a> ·
+        <a href="mailto:info@thaka.com">Email</a> ·
+        <a href="https://facebook.com/thaka" target="_blank" rel="noopener">Facebook</a> ·
+        <a href="https://instagram.com/thaka" target="_blank" rel="noopener">Instagram</a>
+      </p>
+    </footer>
+    <script src="/i18n.js"></script>
+    <script src="/ui.js"></script>
+    <script src="/superadmin.js"></script>
+  </body>
+</html>

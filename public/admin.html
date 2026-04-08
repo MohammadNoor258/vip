@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Restaurant admin</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <div id="loginPanel" class="login-panel">
+      <h2 style="margin-top: 0">Staff sign in</h2>
+      <p class="meta">JWT cookie <code>vip_staff_token</code> — separate from superadmin.</p>
+      <div class="form-stack">
+        <input id="user" type="text" autocomplete="username" placeholder="Username" />
+        <input id="pass" type="password" autocomplete="current-password" placeholder="Password" />
+        <button type="button" id="loginBtn">Sign in</button>
+        <p id="loginErr" style="color: var(--danger); margin: 0; font-size: 0.9rem"></p>
+        <p class="meta" style="margin: 0">Superadmin? <a href="/superadmin.html">Superadmin portal</a></p>
+      </div>
+    </div>
+
+    <div id="dash" class="hidden admin-app">
+      <header class="bar admin-topbar">
+        <h1 class="admin-brand">Restaurant admin</h1>
+        <nav class="admin-nav" id="mainNav" aria-label="Main"></nav>
+        <div class="admin-topbar-actions">
+          <button type="button" class="secondary" id="themeToggleBtn">Dark</button>
+          <span id="roleBadge" class="badge"></span>
+          <span id="wsBadge" class="badge">Socket…</span>
+          <button type="button" class="secondary" id="logoutBtn">Log out</button>
+        </div>
+      </header>
+
+      <div class="page admin-page">
+        <div id="subBanner" class="alert hidden" role="status"></div>
+        <div id="dashExpiring" class="alert banner-expiring-soon hidden" role="status"></div>
+
+        <section id="page-dashboard" class="page-panel hidden">
+          <section id="dashCard" class="card dashboard-card">
+            <h2 class="dashboard-panel-title">Dashboard</h2>
+            <div class="dashboard-stats">
+              <div>
+                <div class="meta">Subscription</div>
+                <div id="dashSubStatus" class="stat-value">—</div>
+              </div>
+              <div>
+                <div class="meta">Today — revenue</div>
+                <div id="dashRevenue" class="stat-value">—</div>
+              </div>
+              <div>
+                <div class="meta">Today — orders</div>
+                <div id="dashOrderCount" class="stat-value">—</div>
+              </div>
+              <div>
+                <div class="meta">Last 7 days — revenue</div>
+                <div id="dashWeekRevenue" class="stat-value">—</div>
+              </div>
+              <div>
+                <div class="meta">Last 7 days — orders</div>
+                <div id="dashWeekOrders" class="stat-value">—</div>
+              </div>
+            </div>
+          </section>
+          <section id="dashTopSellers" class="card dashboard-card">
+            <h2 class="dashboard-panel-title">Top sellers</h2>
+            <div class="row-actions" style="margin-bottom: 0.75rem">
+              <button type="button" id="topTodayBtn" class="secondary">Today</button>
+              <button type="button" id="topWeekBtn" class="secondary">Last 7 days</button>
+            </div>
+            <ol id="topItemsList" class="report-list"></ol>
+          </section>
+          <section id="reportSection" class="card dashboard-card">
+            <h2 class="dashboard-panel-title">Sales report</h2>
+            <div class="row-actions" style="margin-bottom: 0.75rem">
+              <button type="button" id="reportWeekly" class="secondary">Last 7 days</button>
+              <button type="button" id="reportMonthly" class="secondary">Last 30 days</button>
+            </div>
+            <p id="reportSummary" class="meta"></p>
+            <ul id="reportSeries" class="report-list"></ul>
+          </section>
+          <section id="subscriptionSection" class="card dashboard-card hidden">
+            <h2 class="dashboard-panel-title">Subscription</h2>
+            <div class="row-actions flex-wrap">
+              <button type="button" id="subRenewBtn" class="success">Renew +30 days</button>
+              <select id="subPlanSelect" class="input-inline">
+                <option value="Standard">Standard</option>
+                <option value="Premium">Premium</option>
+              </select>
+              <button type="button" id="subPlanBtn" class="secondary">Change plan</button>
+              <button type="button" id="subCancelBtn" class="danger">Cancel subscription</button>
+            </div>
+            <p id="subMgmtMsg" class="meta"></p>
+          </section>
+          <section id="logoSection" class="card dashboard-card hidden">
+            <h2 class="dashboard-panel-title">Restaurant logo</h2>
+            <div class="logo-preview-wrap">
+              <img id="logoPreview" class="logo-preview hidden" alt="Logo" />
+            </div>
+            <form id="logoForm" class="form-stack" style="max-width: 420px">
+              <input type="file" id="logoFile" accept="image/jpeg,image/png,image/webp,image/gif" />
+              <button type="submit">Upload logo</button>
+            </form>
+            <p id="logoMsg" class="meta"></p>
+          </section>
+        </section>
+
+        <section id="page-orders" class="page-panel hidden">
+          <div class="card dashboard-card">
+            <h2 class="dashboard-panel-title">Orders</h2>
+            <div class="order-filters">
+              <label class="meta">Status</label>
+              <select id="filterStatus" class="input-inline">
+                <option value="">All statuses</option>
+                <option value="new">New</option>
+                <option value="preparing">Preparing</option>
+                <option value="ready">Ready</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <label class="meta">From</label>
+              <input type="date" id="filterDateFrom" class="input-inline" />
+              <label class="meta">To</label>
+              <input type="date" id="filterDateTo" class="input-inline" />
+              <label class="meta">Table</label>
+              <input type="text" id="filterTable" class="input-inline" placeholder="e.g. 3" style="max-width: 6rem" />
+              <button type="button" id="filterApplyBtn">Apply filters</button>
+              <button type="button" id="filterResetBtn" class="secondary">Reset</button>
+            </div>
+            <div id="ordersGrouped" class="orders-grouped"></div>
+          </div>
+        </section>
+
+        <section id="page-menu" class="page-panel hidden">
+          <section class="card dashboard-card">
+            <h2 class="dashboard-panel-title">Menu</h2>
+            <div class="row-actions" style="margin-bottom:.75rem">
+              <button type="button" id="menuAddCategoryQuick" class="secondary">+ Add category</button>
+              <input type="text" id="menuSearch" class="input-inline" placeholder="Search items/categories" />
+            </div>
+            <form id="menuAddForm" class="menu-admin-form">
+              <h3 class="subsection-title">Add item</h3>
+              <input type="text" name="name" placeholder="Name" required />
+              <textarea name="description" rows="2" placeholder="Description"></textarea>
+              <input type="number" name="price" step="0.01" min="0" placeholder="Price" required />
+              <select name="categoryId" id="menuAddCategory" required></select>
+              <input type="file" name="image" accept="image/*" />
+              <button type="submit">Add item</button>
+            </form>
+            <form id="menuEditForm" class="menu-admin-form hidden">
+              <h3 class="subsection-title">Edit item (all fields required)</h3>
+              <input type="hidden" name="id" />
+              <input type="text" name="name" placeholder="Name" required />
+              <textarea name="description" rows="2" placeholder="Description"></textarea>
+              <input type="number" name="price" step="0.01" min="0" placeholder="Price" required />
+              <select name="categoryId" id="menuEditCategory" required></select>
+              <select name="available" required>
+                <option value="1">Available</option>
+                <option value="0">Hidden</option>
+              </select>
+              <input type="file" name="image" accept="image/*" />
+              <label class="meta"><input type="checkbox" name="clearImage" value="1" /> Remove image</label>
+              <div class="row-actions">
+                <button type="submit">Save</button>
+                <button type="button" id="menuEditCancel" class="secondary">Cancel</button>
+              </div>
+            </form>
+            <div id="menuAdminList" class="menu-admin-list"></div>
+            <div class="row-actions">
+              <button type="button" id="menuPrevPage" class="secondary">Prev</button>
+              <span id="menuPageInfo" class="meta">Page 1</span>
+              <button type="button" id="menuNextPage" class="secondary">Next</button>
+            </div>
+          </section>
+        </section>
+
+        <section id="page-tables" class="page-panel hidden">
+          <div class="card dashboard-card">
+            <h2 class="dashboard-panel-title">Tables</h2>
+            <p class="meta">Set how many tables exist (numbered 1 … N). Customers can only order for valid tables.</p>
+            <div class="row-actions flex-wrap" style="align-items: center">
+              <label class="meta">Table count</label>
+              <input type="number" id="tableCountInput" min="1" max="500" class="input-inline" style="width: 6rem" />
+              <button type="button" id="tableCountSave">Save</button>
+            </div>
+            <p id="tablesMsg" class="meta"></p>
+            <ul id="tablesListPreview" class="report-list"></ul>
+          </div>
+        </section>
+
+        <section id="page-categories" class="page-panel hidden">
+          <div class="card dashboard-card">
+            <h2 class="dashboard-panel-title">Categories</h2>
+            <form id="catAddForm" class="menu-admin-form">
+              <input type="text" name="name" placeholder="New category name" required />
+              <input type="number" name="sortOrder" placeholder="Sort order" value="0" class="input-inline" style="width: 6rem" />
+              <button type="submit">Add category</button>
+            </form>
+            <form id="catEditForm" class="menu-admin-form hidden">
+              <input type="hidden" name="id" />
+              <input type="text" name="name" required />
+              <input type="number" name="sortOrder" class="input-inline" style="width: 6rem" />
+              <div class="row-actions">
+                <button type="submit">Save</button>
+                <button type="button" id="catEditCancel" class="secondary">Cancel</button>
+              </div>
+            </form>
+            <div id="categoriesList" class="menu-admin-list"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <script src="/ui.js"></script>
+    <script src="/admin.js"></script>
+  </body>
+</html>

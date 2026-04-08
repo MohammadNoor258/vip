@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cashier Table</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <header class="bar">
+      <h1 id="pageTitle">Table</h1>
+      <div class="row-actions">
+        <button id="themeToggleBtn" class="secondary" type="button">Dark</button>
+        <a class="btn secondary" href="/cashier.html">Back</a>
+        <span id="wsBadge" class="badge">Socket…</span>
+      </div>
+    </header>
+    <div class="page">
+      <section class="card dashboard-card">
+        <h2 class="dashboard-panel-title">Status</h2>
+        <p id="tableStatus" class="meta">—</p>
+        <p id="tableTotals" class="meta">—</p>
+        <button id="endSessionBtn" type="button" class="danger hidden">End session</button>
+      </section>
+      <section class="card dashboard-card">
+        <h2 class="dashboard-panel-title">Participants</h2>
+        <ul id="peopleList" class="report-list"></ul>
+      </section>
+      <section class="card dashboard-card">
+        <h2 class="dashboard-panel-title">Orders</h2>
+        <div id="ordersList" class="orders-list"></div>
+      </section>
+    </div>
+    <script src="/ui.js"></script>
+    <script src="/cashier-table.js"></script>
+  </body>
+</html>
+
