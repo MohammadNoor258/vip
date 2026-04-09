@@ -1,3 +1,5 @@
+console.log("Passenger started. PORT:", process.env.PORT);
+
 require('dotenv').config();
 const path = require('path');
 const http = require('http');
@@ -29,7 +31,8 @@ const categoriesRouter = require('./routes/categories');
 const { logSocketEmit } = require('./lib/debug');
 const { perfMiddleware } = require('./middleware/perfMiddleware');
 
-const PORT = Number(process.env.PORT || 3000);
+// استخدام البورت الممرر من Passenger أو 3000 محلياً
+const PORT = process.env.PORT || 3000;
 const APP_DOMAIN = 'https://thaka-smarttable.com';
 const PUBLIC_ROOT = path.join(__dirname, process.env.PUBLIC_HTML_DIR || 'public');
 const LOCALES_ROOT = path.join(__dirname, 'locales');
@@ -51,7 +54,6 @@ const allowedOrigins = (
 const io = new Server(server, {
   cors: {
     origin: (origin, cb) => {
-      // allow same-origin / server-side / file:// etc
       if (!origin) return cb(null, true);
       if (allowedOrigins.includes(origin)) return cb(null, true);
       return cb(new Error('not_allowed_by_cors'));
@@ -91,7 +93,6 @@ io.use((socket, next) => {
     }
   }
 
-  // Public customers join by table session token (no cookies).
   const auth = socket.handshake.auth || {};
   const sessionToken = auth.sessionToken ? String(auth.sessionToken) : '';
   const participantId = Number(auth.participantId);
@@ -100,7 +101,7 @@ io.use((socket, next) => {
       `SELECT s.id AS sessionId, s.status, s.restaurant_id AS restaurantId
        FROM table_sessions s
        JOIN session_participants p ON p.table_session_id = s.id
-       WHERE s.token = ? AND p.id = ?
+       WHERE s.token = $1 AND p.id = $2
        LIMIT 1`,
       [sessionToken, participantId]
     )
@@ -134,7 +135,7 @@ if (process.env.DISABLE_SUBSCRIPTION_API === '1') {
   app.use('/api/subscription', (req, res) =>
     res.status(503).json({
       error: 'route_disabled',
-      message: 'Subscription API is temporarily disabled (DISABLE_SUBSCRIPTION_API=1).',
+      message: 'Subscription API is temporarily disabled.',
     })
   );
 } else {
@@ -159,9 +160,6 @@ app.use(express.static(PUBLIC_ROOT));
 
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({ error: 'invalid_json', message: 'Request body must be valid JSON.' });
-  }
   const code = err && err.status ? Number(err.status) : 500;
   const prod = process.env.NODE_ENV === 'production';
   console.error('[http]', req.method, req.path, err.message || err);
@@ -172,56 +170,32 @@ app.use((err, req, res, next) => {
 });
 
 async function start() {
-  if (!Number.isFinite(PORT) || PORT <= 0) throw new Error('Invalid PORT value.');
-  try {
-    await pool.query('SELECT NOW() AS now');
-    console.log('[startup] database connectivity check passed.');
-  } catch (e) {
-    console.error('[startup] database connectivity check failed:', e);
-    process.exit(1);
-  }
+  // 1. بدء تشغيل السيرفر أولاً (أهم خطوة لتجنب 503)
+  server.listen(PORT, async () => {
+    console.log(`[startup] Server listening on port ${PORT}`);
+    
+    // 2. محاولة الاتصال بالداتابيز في الخلفية
+    try {
+      await pool.query('SELECT NOW() AS now');
+      console.log('[startup] database connectivity check passed.');
+      
+      // 3. تحديث بيانات المطاعم والاشتراكات بعد نجاح الاتصال
+      await refreshAllRestaurants(io);
+      const sub = await refreshSubscriptionState(io, 1);
+      console.log(sub.active ? '[subscription] Active.' : '[subscription] INACTIVE.');
 
-  try {
-    await refreshAllRestaurants(io);
-  } catch (e) {
-    console.error(
-      '[DB] Schema missing or outdated. Run: npm run db:setup (new DB) or apply sql/migration_v2.sql (existing).'
-    );
-    console.error(e.message);
-    process.exit(1);
-  }
+      setInterval(() => {
+        refreshAllRestaurants(io).catch((err) =>
+          console.error('[subscription] refresh failed:', err.message)
+        );
+      }, 60_000);
 
-  const sub = await refreshSubscriptionState(io, 1);
-  console.log(
-    sub.active
-      ? '[subscription] Active (restaurant 1).'
-      : `[subscription] INACTIVE (restaurant 1) — ${sub.message || 'Orders blocked.'}`
-  );
-
-  setInterval(() => {
-    refreshAllRestaurants(io).catch((err) =>
-      console.error('[subscription] refresh failed:', err.message)
-    );
-  }, 60_000);
-
-  server.listen(PORT, () => {
-    console.log(`[startup] server listening on port ${PORT}`);
-    console.log(`[startup] domain: ${APP_DOMAIN}`);
-    console.log(`Customer menu: ${APP_DOMAIN}/menu?table=1`);
-    console.log(`Cashier: ${APP_DOMAIN}/cashier.html`);
-    console.log(`Owner dashboard: ${APP_DOMAIN}/owner.html`);
-    console.log(`Legacy admin: ${APP_DOMAIN}/admin.html`);
-    console.log(`Superadmin: ${APP_DOMAIN}/superadmin.html`);
-    if (process.env.TRUST_PROXY === '1') {
-      console.log('[http] trust proxy enabled (use behind Cloudflare / reverse proxy)');
+    } catch (e) {
+      console.error('[startup] Critical background error:', e.message);
+      // لا نغلق السيرفر هنا لنسمح بظهور الأخطاء في اللوجز
     }
-    console.log(
-      '[perf] /api/dashboard/stats: one aggregated SQL on cache miss; [PERF] logs queries & dbTime. Redis: REDIS_URL. Order emit logs: VIP_LOG_ORDER_EMIT=1. Snapshot on socket connect: SOCKET_SNAPSHOT_ON_CONNECT=1 (off by default).'
-    );
   });
 }
-
-module.exports = { app, server, io, start };
 
 if (require.main === module) {
   start().catch((err) => {
@@ -229,3 +203,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = { app, server, io, start };
