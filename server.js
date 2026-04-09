@@ -29,7 +29,7 @@ const categoriesRouter = require('./routes/categories');
 const { logSocketEmit } = require('./lib/debug');
 const { perfMiddleware } = require('./middleware/perfMiddleware');
 
-const PORT = Number(process.env.PORT);
+const PORT = Number(process.env.PORT || 3000);
 const APP_DOMAIN = 'https://thaka-smarttable.com';
 const PUBLIC_ROOT = path.join(__dirname, process.env.PUBLIC_HTML_DIR || 'public');
 const LOCALES_ROOT = path.join(__dirname, 'locales');
@@ -172,9 +172,7 @@ app.use((err, req, res, next) => {
 });
 
 async function start() {
-  if (!Number.isFinite(PORT) || PORT <= 0) {
-    throw new Error('PORT is required and must be a valid number.');
-  }
+  if (!Number.isFinite(PORT) || PORT <= 0) throw new Error('Invalid PORT value.');
   try {
     await pool.query('SELECT NOW() AS now');
     console.log('[startup] database connectivity check passed.');
