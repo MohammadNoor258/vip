@@ -29,7 +29,10 @@ const categoriesRouter = require('./routes/categories');
 const { logSocketEmit } = require('./lib/debug');
 const { perfMiddleware } = require('./middleware/perfMiddleware');
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT);
+const APP_DOMAIN = 'https://thaka-smarttable.com';
+const PUBLIC_ROOT = path.join(__dirname, process.env.PUBLIC_HTML_DIR || 'public');
+const LOCALES_ROOT = path.join(__dirname, 'locales');
 const app = express();
 const server = http.createServer(app);
 
@@ -39,7 +42,7 @@ if (process.env.TRUST_PROXY === '1') {
 
 const allowedOrigins = (
   process.env.CORS_ORIGINS ||
-  'https://yourdomain.com,http://localhost:3000,http://127.0.0.1:3000'
+  APP_DOMAIN
 )
   .split(',')
   .map((s) => s.trim())
@@ -147,11 +150,12 @@ app.use('/api/status', statusRouter);
 app.use('/api/orders', ordersRouter);
 
 app.get('/menu', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'menu.html'));
+  res.sendFile(path.join(PUBLIC_ROOT, 'menu.html'));
 });
 
-app.use('/locales', express.static(path.join(__dirname, 'locales')));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use('/locales', express.static(LOCALES_ROOT));
+app.use('/uploads', express.static(path.join(PUBLIC_ROOT, 'uploads')));
+app.use(express.static(PUBLIC_ROOT));
 
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
@@ -168,10 +172,14 @@ app.use((err, req, res, next) => {
 });
 
 async function start() {
+  if (!Number.isFinite(PORT) || PORT <= 0) {
+    throw new Error('PORT is required and must be a valid number.');
+  }
   try {
-    await pool.query('SELECT 1');
+    await pool.query('SELECT NOW() AS now');
+    console.log('[startup] database connectivity check passed.');
   } catch (e) {
-    console.error('MySQL connection failed:', e.message);
+    console.error('[startup] database connectivity check failed:', e);
     process.exit(1);
   }
 
@@ -199,12 +207,13 @@ async function start() {
   }, 60_000);
 
   server.listen(PORT, () => {
-    console.log(`Server http://localhost:${PORT}`);
-    console.log(`Customer menu: http://localhost:${PORT}/menu?table=1`);
-    console.log(`Cashier: http://localhost:${PORT}/cashier.html`);
-    console.log(`Owner dashboard: http://localhost:${PORT}/owner.html`);
-    console.log(`Legacy admin: http://localhost:${PORT}/admin.html`);
-    console.log(`Superadmin: http://localhost:${PORT}/superadmin.html`);
+    console.log(`[startup] server listening on port ${PORT}`);
+    console.log(`[startup] domain: ${APP_DOMAIN}`);
+    console.log(`Customer menu: ${APP_DOMAIN}/menu?table=1`);
+    console.log(`Cashier: ${APP_DOMAIN}/cashier.html`);
+    console.log(`Owner dashboard: ${APP_DOMAIN}/owner.html`);
+    console.log(`Legacy admin: ${APP_DOMAIN}/admin.html`);
+    console.log(`Superadmin: ${APP_DOMAIN}/superadmin.html`);
     if (process.env.TRUST_PROXY === '1') {
       console.log('[http] trust proxy enabled (use behind Cloudflare / reverse proxy)');
     }
@@ -218,7 +227,7 @@ module.exports = { app, server, io, start };
 
 if (require.main === module) {
   start().catch((err) => {
-    console.error(err);
+    console.error('[startup] fatal bootstrap error:', err);
     process.exit(1);
   });
 }

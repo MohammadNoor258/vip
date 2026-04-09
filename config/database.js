@@ -1,45 +1,101 @@
-const { Pool } = require('pg'); // حولنا من mysql2 إلى pg
+const { Pool } = require('pg');
 const { logDb } = require('../lib/debug');
 const { getStore } = require('../lib/requestContext');
 require('dotenv').config();
 
-// إعداد الاتصال بـ PostgreSQL (Supabase)
-const basePool = new Pool({
+const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // ضروري جداً للربط مع Supabase من خارج سيرفراتهم
+    rejectUnauthorized: false,
   },
-  max: 10, // تعادل connectionLimit
+  max: Number(process.env.PG_POOL_MAX || 10),
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 });
 
-// حفظ الدالة الأصلية للاستعلام
-const origQuery = basePool.query.bind(basePool);
+function normalizeSqlAndParams(sql, params) {
+  let text = String(sql || '').replace(/`([^`]+)`/g, '"$1"');
+  let values = [];
 
-// تعديل دالة query لإضافة نظام الـ Logging والـ Stats اللي كان عندك
-basePool.query = async (...args) => {
+  if (Array.isArray(params)) {
+    let i = 0;
+    text = text.replace(/\?/g, () => {
+      i += 1;
+      return `$${i}`;
+    });
+    values = params;
+  } else if (params && typeof params === 'object') {
+    const named = [];
+    text = text.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, key) => {
+      named.push(key);
+      return `$${named.length}`;
+    });
+    values = named.map((k) => params[k]);
+  }
+
+  const looksInsert = /^\s*insert\s+into\b/i.test(text);
+  if (looksInsert && !/\breturning\b/i.test(text)) {
+    text = `${text} RETURNING id`;
+  }
+
+  return { text, values };
+}
+
+async function mysqlLikeQuery(executor, sql, params) {
+  const { text, values } = normalizeSqlAndParams(sql, params);
   const t0 = Date.now();
   try {
-    // في PostgreSQL، النتائج ترجع في كائن يحتوي على rows
-    const res = await origQuery(...args);
-    return res; 
+    const res = await executor(text, values);
+    const isRead = /^\s*(select|with)\b/i.test(text);
+
+    if (isRead) {
+      return [res.rows];
+    }
+
+    const out = {
+      affectedRows: res.rowCount || 0,
+      rowCount: res.rowCount || 0,
+      insertId: res.rows && res.rows[0] && Object.prototype.hasOwnProperty.call(res.rows[0], 'id')
+        ? res.rows[0].id
+        : null,
+    };
+    return [out];
   } finally {
     const ms = Date.now() - t0;
-    // استخراج نص الـ SQL للـ Debugging
-    const sql = typeof args[0] === 'string' ? args[0] : args[0]?.text || '';
-    
-    logDb('query', ms, sql);
-    
+    const sqlText = typeof sql === 'string' ? sql : sql && sql.text ? sql.text : '';
+    logDb('query', ms, sqlText);
     const st = getStore();
     if (st) {
       st.queryCount += 1;
       st.dbTime += ms;
     }
   }
-};
+}
 
-// تصدير الـ pool بنفس الاسم القديم عشان ما نضطر نغير في ملفات الـ routes
-const pool = basePool;
+const pool = {
+  query(sql, params) {
+    return mysqlLikeQuery((text, values) => pgPool.query(text, values), sql, params);
+  },
+  async getConnection() {
+    const client = await pgPool.connect();
+    return {
+      query(sql, params) {
+        return mysqlLikeQuery((text, values) => client.query(text, values), sql, params);
+      },
+      async beginTransaction() {
+        await client.query('BEGIN');
+      },
+      async commit() {
+        await client.query('COMMIT');
+      },
+      async rollback() {
+        await client.query('ROLLBACK');
+      },
+      release() {
+        client.release();
+      },
+    };
+  },
+};
 
 module.exports = { pool };

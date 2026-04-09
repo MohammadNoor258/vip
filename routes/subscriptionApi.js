@@ -31,7 +31,7 @@ router.post('/renew', ...adminOnly, async (req, res) => {
     }
     await pool.query(
       `UPDATE subscription
-       SET expires_at = DATE_ADD(GREATEST(expires_at, NOW()), INTERVAL 30 DAY)
+       SET expires_at = GREATEST(COALESCE(expires_at, NOW()), NOW()) + INTERVAL '30 day'
        WHERE id = ? AND restaurant_id = ?`,
       [rows[0].id, restaurantId]
     );

@@ -1,22 +1,11 @@
 const bcrypt = require('bcrypt');
-const mysql = require('mysql2/promise');
+const { pool } = require('../config/database');
 require('dotenv').config();
 
 async function main() {
-  const pool = mysql.createPool({
-    host: process.env.MYSQL_HOST || '127.0.0.1',
-    port: Number(process.env.MYSQL_PORT) || 3306,
-    user: process.env.MYSQL_USER || 'root',
-    password: process.env.MYSQL_PASSWORD || '',
-    database: process.env.MYSQL_DATABASE || 'restaurant_vip',
-    waitForConnections: true,
-    connectionLimit: 5,
-  });
-
   const [existingTables] = await pool.query('SELECT COUNT(*) AS c FROM `tables`');
   if (existingTables[0].c > 0) {
     console.log('Seed skipped: tables already has rows.');
-    await pool.end();
     return;
   }
 
@@ -92,7 +81,6 @@ async function main() {
     ['active', 'Standard', start, end, 'Seed subscription']
   );
 
-  await pool.end();
   console.log('Seed complete: categories, restaurant 1, tables 1–10, admin/admin123, cashier/cashier123, superadmin/super123.');
 }
 
