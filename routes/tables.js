@@ -56,7 +56,7 @@ router.get(
          GROUP BY table_session_id
        ) oc ON oc.table_session_id = s.id
        WHERE t.restaurant_id = ?
-       ORDER BY NULLIF(t.table_number, '')::int NULLS LAST, t.table_number`,
+       ORDER BY CAST(t.table_number AS UNSIGNED)`,
       [restaurantId]
     );
 
@@ -81,7 +81,7 @@ router.get(
 router.get('/', async (req, res) => {
   const restaurantId = await resolveRestaurantIdAsync(req);
   const [rows] = await pool.query(
-    'SELECT id, table_number AS tableNumber, label, created_at AS createdAt FROM "tables" WHERE restaurant_id = ? ORDER BY NULLIF(table_number, \'\')::int NULLS LAST, table_number',
+    'SELECT id, table_number AS tableNumber, label, created_at AS createdAt FROM `tables` WHERE restaurant_id = ? ORDER BY CAST(table_number AS UNSIGNED)',
     [restaurantId]
   );
   res.json(rows);
@@ -177,12 +177,9 @@ router.post('/session/:token/ping', async (req, res) => {
   }
   await pool.query(
     `UPDATE session_participants p
-     SET last_seen_at = NOW(),
-         active = CASE WHEN s.status = 'active' THEN 1 ELSE 0 END
-     FROM table_sessions s
-     WHERE s.id = p.table_session_id
-       AND s.token = ?
-       AND p.id = ?`,
+     JOIN table_sessions s ON s.id = p.table_session_id
+     SET p.last_seen_at = NOW(), p.active = (s.status = 'active')
+     WHERE s.token = ? AND p.id = ?`,
     [token, participantId]
   );
   res.json({ ok: true });

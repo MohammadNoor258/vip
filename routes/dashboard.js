@@ -9,10 +9,10 @@ const router = express.Router();
 
 const AGGREGATED_STATS_SQL = `
 SELECT
-  COALESCE(SUM(CASE WHEN DATE(created_at) = CURRENT_DATE AND status IN ('completed','ready') THEN total END), 0) AS "todayRevenue",
-  COUNT(CASE WHEN DATE(created_at) = CURRENT_DATE THEN 1 END) AS "todayOrderCount",
-  COALESCE(SUM(CASE WHEN created_at >= (CURRENT_DATE - INTERVAL '6 day') AND status IN ('completed','ready') THEN total END), 0) AS "weekRevenue",
-  COUNT(CASE WHEN created_at >= (CURRENT_DATE - INTERVAL '6 day') THEN 1 END) AS "weekOrderCount"
+  COALESCE(SUM(CASE WHEN DATE(created_at) = CURDATE() AND status IN ('completed','ready') THEN total END), 0) AS todayRevenue,
+  COUNT(CASE WHEN DATE(created_at) = CURDATE() THEN 1 END) AS todayOrderCount,
+  COALESCE(SUM(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND status IN ('completed','ready') THEN total END), 0) AS weekRevenue,
+  COUNT(CASE WHEN created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) THEN 1 END) AS weekOrderCount
 FROM orders
 WHERE restaurant_id = ?
 `;
@@ -93,7 +93,7 @@ router.get('/report', ...staffDash, async (req, res) => {
               COUNT(*) AS orderCount
        FROM orders
        WHERE restaurant_id = ?
-        AND created_at >= (CURRENT_DATE - (?::int || ' day')::interval)
+        AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
        GROUP BY DATE(created_at)
        ORDER BY day ASC`,
       [restaurantId, days - 1]

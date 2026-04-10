@@ -1,65 +1,41 @@
-const { Pool } = require('pg');
+const mysql = require('mysql2/promise');
 const { logDb } = require('../lib/debug');
 const { getStore } = require('../lib/requestContext');
 require('dotenv').config();
 
-const pgPool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-  max: Number(process.env.PG_POOL_MAX || 10),
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+const basePool = mysql.createPool({
+  host: process.env.MYSQL_HOST || 'localhost',
+  port: Number(process.env.MYSQL_PORT || 3306),
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  waitForConnections: true,
+  connectionLimit: Number(process.env.MYSQL_POOL_MAX || 10),
+  queueLimit: 0,
 });
 
 function normalizeSqlAndParams(sql, params) {
-  let text = String(sql || '').replace(/`([^`]+)`/g, '"$1"');
-  let values = [];
+  let text = String(sql || '');
+  let values = params;
 
-  if (Array.isArray(params)) {
-    let i = 0;
-    text = text.replace(/\?/g, () => {
-      i += 1;
-      return `$${i}`;
-    });
-    values = params;
-  } else if (params && typeof params === 'object') {
-    const named = [];
+  if (params && !Array.isArray(params) && typeof params === 'object') {
+    const orderedKeys = [];
     text = text.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (_, key) => {
-      named.push(key);
-      return `$${named.length}`;
+      orderedKeys.push(key);
+      return '?';
     });
-    values = named.map((k) => params[k]);
+    values = orderedKeys.map((k) => params[k]);
   }
 
-  const looksInsert = /^\s*insert\s+into\b/i.test(text);
-  if (looksInsert && !/\breturning\b/i.test(text)) {
-    text = `${text} RETURNING id`;
-  }
-
+  if (!Array.isArray(values)) values = [];
   return { text, values };
 }
 
-async function mysqlLikeQuery(executor, sql, params) {
+async function instrumentedQuery(executor, sql, params) {
   const { text, values } = normalizeSqlAndParams(sql, params);
   const t0 = Date.now();
   try {
-    const res = await executor(text, values);
-    const isRead = /^\s*(select|with)\b/i.test(text);
-
-    if (isRead) {
-      return [res.rows];
-    }
-
-    const out = {
-      affectedRows: res.rowCount || 0,
-      rowCount: res.rowCount || 0,
-      insertId: res.rows && res.rows[0] && Object.prototype.hasOwnProperty.call(res.rows[0], 'id')
-        ? res.rows[0].id
-        : null,
-    };
-    return [out];
+    return await executor(text, values);
   } finally {
     const ms = Date.now() - t0;
     const sqlText = typeof sql === 'string' ? sql : sql && sql.text ? sql.text : '';
@@ -74,25 +50,25 @@ async function mysqlLikeQuery(executor, sql, params) {
 
 const pool = {
   query(sql, params) {
-    return mysqlLikeQuery((text, values) => pgPool.query(text, values), sql, params);
+    return instrumentedQuery((text, values) => basePool.query(text, values), sql, params);
   },
   async getConnection() {
-    const client = await pgPool.connect();
+    const conn = await basePool.getConnection();
     return {
       query(sql, params) {
-        return mysqlLikeQuery((text, values) => client.query(text, values), sql, params);
+        return instrumentedQuery((text, values) => conn.query(text, values), sql, params);
       },
       async beginTransaction() {
-        await client.query('BEGIN');
+        await conn.beginTransaction();
       },
       async commit() {
-        await client.query('COMMIT');
+        await conn.commit();
       },
       async rollback() {
-        await client.query('ROLLBACK');
+        await conn.rollback();
       },
       release() {
-        client.release();
+        conn.release();
       },
     };
   },

@@ -101,7 +101,7 @@ io.use((socket, next) => {
       `SELECT s.id AS sessionId, s.status, s.restaurant_id AS restaurantId
        FROM table_sessions s
        JOIN session_participants p ON p.table_session_id = s.id
-       WHERE s.token = $1 AND p.id = $2
+       WHERE s.token = ? AND p.id = ?
        LIMIT 1`,
       [sessionToken, participantId]
     )
@@ -170,29 +170,30 @@ app.use((err, req, res, next) => {
 });
 
 async function start() {
-  // 1. بدء تشغيل السيرفر أولاً (أهم خطوة لتجنب 503)
+  let dbReady = false;
+  try {
+    await pool.query('SELECT 1');
+    dbReady = true;
+    console.log('[startup] Database connection established successfully');
+  } catch (e) {
+    console.error(`[error] Database connection failed: ${e && e.message ? e.message : e}`);
+  }
+
   server.listen(PORT, async () => {
     console.log(`[startup] Server listening on port ${PORT}`);
-    
-    // 2. محاولة الاتصال بالداتابيز في الخلفية
+
+    if (!dbReady) return;
     try {
-      await pool.query('SELECT NOW() AS now');
-      console.log('[startup] database connectivity check passed.');
-      
-      // 3. تحديث بيانات المطاعم والاشتراكات بعد نجاح الاتصال
       await refreshAllRestaurants(io);
       const sub = await refreshSubscriptionState(io, 1);
       console.log(sub.active ? '[subscription] Active.' : '[subscription] INACTIVE.');
-
       setInterval(() => {
         refreshAllRestaurants(io).catch((err) =>
           console.error('[subscription] refresh failed:', err.message)
         );
       }, 60_000);
-
     } catch (e) {
       console.error('[startup] Critical background error:', e.message);
-      // لا نغلق السيرفر هنا لنسمح بظهور الأخطاء في اللوجز
     }
   });
 }
