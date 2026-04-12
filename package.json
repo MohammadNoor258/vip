@@ -1,33 +1,33 @@
 {
- "name": "restaurant-order-system",
- "version": "1.0.0",
- "description": "Customer ordering, admin dashboard, subscription gate",
- "main": "server.js",
- "scripts": {
- "start": "node server.js",
- "build": "echo \"no build step\"",
- "test": "node --test test/*.test.js",
- "db:setup": "node scripts/setup-db.js",
- "db:seed": "node scripts/seed.js"
- },
- "engines": {
- "node": ">=18"
- },
- "dependencies": {
- "bcrypt": "^6.0.0",
- "cookie": "^1.1.1",
- "cookie-parser": "^1.4.7",
- "dotenv": "^16.4.5",
- "express": "^4.21.0",
- "jsonwebtoken": "^9.0.3",
- "multer": "^2.1.1",
- "mysql2": "^3.11.3",
- "qrcode": "^1.5.4",
- "redis": "^4.7.0",
- "socket.io": "^4.8.1",
- "statuses": "^2.0.2"
- },
- "devDependencies": {
- "supertest": "^7.1.1"
- }
+  "name": "restaurant-order-system",
+  "version": "1.0.0",
+  "description": "Customer ordering, admin dashboard, subscription gate",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo \"no build step\"",
+    "test": "node --test test/*.test.js",
+    "db:setup": "node scripts/setup-db.js",
+    "db:seed": "node scripts/seed.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie": "^1.1.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "mysql2": "^3.11.3",
+    "qrcode": "^1.5.4",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.1",
+    "statuses": "^2.0.2"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.1"
+  }
 }

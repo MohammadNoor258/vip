@@ -1,5 +1,3 @@
-console.log("Passenger started. PORT:", process.env.PORT);
-
 require('dotenv').config();
 const path = require('path');
 const http = require('http');
@@ -8,6 +6,8 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const { Server } = require('socket.io');
 
+const { PUBLIC_ROOT, LOCALES_ROOT } = require('./lib/paths');
+const { parseAllowedOrigins } = require('./lib/corsOrigins');
 const { pool } = require('./config/database');
 const { refreshSubscriptionState, refreshAllRestaurants } = require('./services/subscriptionService');
 const { ensureUploadDirs } = require('./lib/uploads');
@@ -31,11 +31,7 @@ const categoriesRouter = require('./routes/categories');
 const { logSocketEmit } = require('./lib/debug');
 const { perfMiddleware } = require('./middleware/perfMiddleware');
 
-// استخدام البورت الممرر من Passenger أو 3000 محلياً
 const PORT = process.env.PORT || 3000;
-const APP_DOMAIN = 'https://thaka-smarttable.com';
-const PUBLIC_ROOT = path.join(__dirname, process.env.PUBLIC_HTML_DIR || 'public');
-const LOCALES_ROOT = path.join(__dirname, 'locales');
 const app = express();
 const server = http.createServer(app);
 
@@ -43,13 +39,29 @@ if (process.env.TRUST_PROXY === '1') {
   app.set('trust proxy', 1);
 }
 
-const allowedOrigins = (
-  process.env.CORS_ORIGINS ||
-  APP_DOMAIN
-)
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
+const allowedOrigins = parseAllowedOrigins();
+if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
+  console.warn(
+    '[startup] Set CORS_ORIGINS or PUBLIC_BASE_URL for Socket.IO and browser CORS in production.'
+  );
+}
+
+function healthPayload() {
+  return {
+    ok: true,
+    service: 'restaurant-order-system',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+app.get('/health', (req, res) => {
+  res.status(200).json(healthPayload());
+});
+
+app.get('/api/health', (req, res) => {
+  res.status(200).json(healthPayload());
+});
 
 const io = new Server(server, {
   cors: {
@@ -181,6 +193,9 @@ async function start() {
 
   server.listen(PORT, async () => {
     console.log(`[startup] Server listening on port ${PORT}`);
+    if (process.env.DEBUG_STARTUP === '1') {
+      console.log('[startup] Passenger PORT:', process.env.PORT, 'cwd:', process.cwd());
+    }
 
     if (!dbReady) return;
     try {

@@ -13,10 +13,12 @@ const { logSocketEmit } = require('../lib/debug');
 const router = express.Router();
 
 function baseUrl() {
-  return (process.env.PUBLIC_BASE_URL || 'https://thaka-smarttable.com').replace(
-    /\/$/,
-    ''
-  );
+  const fromEnv = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/$/, '');
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV !== 'production') {
+    return 'http://localhost:3000';
+  }
+  return '';
 }
 
 router.get(
@@ -274,9 +276,16 @@ router.get('/:tableNumber/qrcode.png', async (req, res) => {
   if (!rows.length) {
     return res.status(404).json({ error: 'table_not_found' });
   }
+  const base = baseUrl();
+  if (!base) {
+    return res.status(500).json({
+      error: 'config',
+      message: 'Set PUBLIC_BASE_URL in environment for QR code URLs.',
+    });
+  }
   const [[rest]] = await pool.query('SELECT slug FROM restaurants WHERE id = ? LIMIT 1', [restaurantId]);
   const slug = rest && rest.slug ? rest.slug : '';
-  const url = `${baseUrl()}/menu?restaurant=${encodeURIComponent(slug)}&table=${encodeURIComponent(tableNumber)}`;
+  const url = `${base}/menu?restaurant=${encodeURIComponent(slug)}&table=${encodeURIComponent(tableNumber)}`;
   try {
     const png = await QRCode.toBuffer(url, { type: 'png', width: 320, margin: 2 });
     res.setHeader('Content-Type', 'image/png');
@@ -297,9 +306,16 @@ router.get('/:tableNumber/link', async (req, res) => {
   if (!rows.length) {
     return res.status(404).json({ error: 'table_not_found' });
   }
+  const base = baseUrl();
+  if (!base) {
+    return res.status(500).json({
+      error: 'config',
+      message: 'Set PUBLIC_BASE_URL in environment for table links.',
+    });
+  }
   const [[rest]] = await pool.query('SELECT slug FROM restaurants WHERE id = ? LIMIT 1', [restaurantId]);
   const slug = rest && rest.slug ? rest.slug : '';
-  const url = `${baseUrl()}/menu?restaurant=${encodeURIComponent(slug)}&table=${encodeURIComponent(tableNumber)}`;
+  const url = `${base}/menu?restaurant=${encodeURIComponent(slug)}&table=${encodeURIComponent(tableNumber)}`;
   res.json({ url, tableNumber, restaurantId, restaurant: slug });
 });
 
