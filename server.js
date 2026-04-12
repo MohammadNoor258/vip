@@ -8,7 +8,7 @@ const { Server } = require('socket.io');
 
 const { PUBLIC_ROOT, LOCALES_ROOT } = require('./lib/paths');
 const { parseAllowedOrigins } = require('./lib/corsOrigins');
-const { pool } = require('./config/database');
+const { pool } = require('./config/database'); // الآن مربوط على PostgreSQL
 const { refreshSubscriptionState, refreshAllRestaurants } = require('./services/subscriptionService');
 const { ensureUploadDirs } = require('./lib/uploads');
 const {
@@ -81,7 +81,7 @@ app.use(express.json({ limit: '512kb' }));
 app.use(perfMiddleware);
 ensureUploadDirs();
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   const raw = socket.handshake.headers.cookie;
   const cookies = raw ? cookie.parse(raw) : {};
 
@@ -109,26 +109,30 @@ io.use((socket, next) => {
   const sessionToken = auth.sessionToken ? String(auth.sessionToken) : '';
   const participantId = Number(auth.participantId);
   if (sessionToken && Number.isFinite(participantId)) {
-    pool.query(
-      `SELECT s.id AS sessionId, s.status, s.restaurant_id AS restaurantId
-       FROM table_sessions s
-       JOIN session_participants p ON p.table_session_id = s.id
-       WHERE s.token = ? AND p.id = ?
-       LIMIT 1`,
-      [sessionToken, participantId]
-    )
-      .then(([rows]) => {
-        if (rows && rows.length && rows[0].status === 'active') {
-          socket.join(`session:${sessionToken}`);
-          socket.join(`public:r${rows[0].restaurantId}`);
-          logSocketEmit('customer:join', {
-            rooms: [`session:${sessionToken}`, `public:r${rows[0].restaurantId}`],
-            participantId,
-          });
-        }
-        next();
-      })
-      .catch(() => next());
+    try {
+      const result = await pool.query(
+        `SELECT s.id AS "sessionId", s.status, s.restaurant_id AS "restaurantId"
+         FROM table_sessions s
+         JOIN session_participants p ON p.table_session_id = s.id
+         WHERE s.token = $1 AND p.id = $2
+         LIMIT 1`,
+        [sessionToken, participantId]
+      );
+
+      const rows = result.rows;
+      if (rows && rows.length && rows[0].status === 'active') {
+        socket.join(`session:${sessionToken}`);
+        socket.join(`public:r${rows[0].restaurantId}`);
+        logSocketEmit('customer:join', {
+          rooms: [`session:${sessionToken}`, `public:r${rows[0].restaurantId}`],
+          participantId,
+        });
+      }
+      next();
+    } catch (err) {
+      console.error("DB error in socket auth:", err.message);
+      next();
+    }
     return;
   }
 
